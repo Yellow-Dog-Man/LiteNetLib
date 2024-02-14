@@ -1,0 +1,21 @@
+name: Publish Library
+
+# When a release is published
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+    - name: Build
+      run: dotnet build --configuration Release -p:Version=${{ env.VERSION }} -p:PackageVersion=${{ env.VERSION }}
+    - name: Nuget Publish
+      run: dotnet nuget push .\LiteNetLib\bin\Release\*.nupkg -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
