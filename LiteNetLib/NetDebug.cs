@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-
 namespace LiteNetLib
 {
     public class InvalidPacketException : ArgumentException
@@ -60,25 +58,21 @@ namespace LiteNetLib
             }
         }
 
-        [Conditional("DEBUG_MESSAGES")]
         internal static void Write(string str)
         {
             WriteLogic(NetLogLevel.Trace, str);
         }
 
-        [Conditional("DEBUG_MESSAGES")]
         internal static void Write(NetLogLevel level, string str)
         {
             WriteLogic(level, str);
         }
 
-        [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
         internal static void WriteForce(string str)
         {
             WriteLogic(NetLogLevel.Trace, str);
         }
 
-        [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
         internal static void WriteForce(NetLogLevel level, string str)
         {
             WriteLogic(level, str);
