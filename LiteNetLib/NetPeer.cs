@@ -1268,7 +1268,7 @@ namespace LiteNetLib
 
             if (NetManager.EnableStatistics)
             {
-                Statistics.IncrementPacketsSent();
+                Statistics.IncrementPacketsSent(_mergeCount);
                 Statistics.AddBytesSent(bytesSent);
             }
 
@@ -1288,7 +1288,7 @@ namespace LiteNetLib
 
                 if (NetManager.EnableStatistics)
                 {
-                    Statistics.IncrementPacketsSent();
+                    Statistics.IncrementPacketsSent(1);
                     Statistics.AddBytesSent(bytesSent);
                 }
 

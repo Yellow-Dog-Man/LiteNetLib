@@ -608,7 +608,7 @@ namespace LiteNetLib
 
             if (EnableStatistics)
             {
-                Statistics.IncrementPacketsSent();
+                Statistics.IncrementPacketsSent(1);
                 Statistics.AddBytesSent(length);
             }
 

@@ -187,7 +187,12 @@ namespace LiteNetLib
                     {
                         int relate = NetUtils.RelativeSequenceNumber(_localSeqence, _localWindowStart);
                         if (relate >= _windowSize)
+                        {
+                            if (Peer.NetManager.EnableStatistics)
+                                Peer.Statistics.IncrementWindowWaits();
+
                             break;
+                        }
 
                         var netPacket = OutgoingQueue.Dequeue();
                         netPacket.Sequence = (ushort) _localSeqence;
@@ -294,7 +299,7 @@ namespace LiteNetLib
             //detailed check
             if (seq == _remoteSequence)
             {
-                NetDebug.Write("[RR]ReliableInOrder packet succes");
+                NetDebug.Write("[RR]ReliableInOrder packet success");
                 Peer.AddReliablePacket(_deliveryMethod, packet);
                 _remoteSequence = (_remoteSequence + 1) % NetConstants.MaxSequence;
 
