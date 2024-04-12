@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 
 namespace LiteNetLib
@@ -9,6 +10,9 @@ namespace LiteNetLib
         public bool TrackAveragePacketSize;
         public int PacketSizeAverageWindow = 256;
 
+        public bool TrackAveragePacketMergeCount;
+        public int PacketMergeAverageWindow = 256;
+
         private long _packetsSent;
         private long _packetsReceived;
         private long _bytesSent;
@@ -16,6 +20,7 @@ namespace LiteNetLib
         private long _packetLoss;
 
         ConcurrentQueue<long> _packetSizes = new ConcurrentQueue<long>();
+        ConcurrentQueue<int> _packetMerges = new ConcurrentQueue<int>();
 
         public long PacketsSent => Interlocked.Read(ref _packetsSent);
         public long PacketsReceived => Interlocked.Read(ref _packetsReceived);
@@ -38,19 +43,40 @@ namespace LiteNetLib
             if (!TrackAveragePacketSize)
                 throw new InvalidOperationException("Tracking average packet size is not enabled");
 
-            int count = 0;
-            long sum = 0;
+            return ComputeAverage(_packetSizes, size => (double)size);
+        }
 
-            foreach(var size in _packetSizes)
+        public double ComputeAveragePacketMerge()
+        {
+            if (!TrackAveragePacketMergeCount)
+                throw new InvalidOperationException("Tracking average packet merge is not enabled");
+
+            return ComputeAverage(_packetMerges, count => (double)count);
+        }
+
+        double ComputeAverage<T>(ConcurrentQueue<T> data, Func<T, double> selector)
+        {
+            int count = 0;
+            double sum = 0;
+
+            foreach (var value in data)
             {
                 count++;
-                sum += size;
+                sum += selector(value);
             }
 
             if (count == 0)
                 return 0;
 
-            return sum / (double)count;
+            return sum / count;
+        }
+
+        void Store<T>(ConcurrentQueue<T> data, T value, int max)
+        {
+            data.Enqueue(value);
+
+            while (data.Count > 0 && data.Count > max)
+                data.TryDequeue(out _);
         }
 
         public void Reset()
@@ -60,11 +86,19 @@ namespace LiteNetLib
             Interlocked.Exchange(ref _bytesSent, 0);
             Interlocked.Exchange(ref _bytesReceived, 0);
             Interlocked.Exchange(ref _packetLoss, 0);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            _packetSizes.Clear();
+            _packetMerges.Clear();
+#endif
         }
 
-        public void IncrementPacketsSent()
+        public void IncrementPacketsSent(int merged)
         {
             Interlocked.Increment(ref _packetsSent);
+
+            if (TrackAveragePacketMergeCount)
+                Store(_packetMerges, merged, PacketMergeAverageWindow);
         }
 
         public void IncrementPacketsReceived()
@@ -77,12 +111,7 @@ namespace LiteNetLib
             Interlocked.Add(ref _bytesSent, bytesSent);
 
             if (TrackAveragePacketSize)
-            {
-                _packetSizes.Enqueue(bytesSent);
-
-                while (_packetSizes.Count > 0 && _packetSizes.Count > PacketSizeAverageWindow)
-                    _packetSizes.TryDequeue(out _);
-            }
+                Store(_packetSizes, bytesSent, PacketSizeAverageWindow);
         }
 
         public void AddBytesReceived(long bytesReceived)
