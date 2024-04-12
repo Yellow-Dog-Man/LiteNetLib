@@ -294,7 +294,7 @@ namespace LiteNetLib
             //detailed check
             if (seq == _remoteSequence)
             {
-                NetDebug.Write("[RR]ReliableInOrder packet succes");
+                NetDebug.Write("[RR]ReliableInOrder packet success");
                 Peer.AddReliablePacket(_deliveryMethod, packet);
                 _remoteSequence = (_remoteSequence + 1) % NetConstants.MaxSequence;
 
