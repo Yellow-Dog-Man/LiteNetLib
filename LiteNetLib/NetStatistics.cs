@@ -18,6 +18,7 @@ namespace LiteNetLib
         private long _bytesSent;
         private long _bytesReceived;
         private long _packetLoss;
+        private long _windowWaits;
 
         ConcurrentQueue<long> _packetSizes = new ConcurrentQueue<long>();
         ConcurrentQueue<int> _packetMerges = new ConcurrentQueue<int>();
@@ -27,6 +28,7 @@ namespace LiteNetLib
         public long BytesSent => Interlocked.Read(ref _bytesSent);
         public long BytesReceived => Interlocked.Read(ref _bytesReceived);
         public long PacketLoss => Interlocked.Read(ref _packetLoss);
+        public long WindowWaitCount => Interlocked.Read(ref _windowWaits);
 
         public long PacketLossPercent
         {
@@ -86,6 +88,7 @@ namespace LiteNetLib
             Interlocked.Exchange(ref _bytesSent, 0);
             Interlocked.Exchange(ref _bytesReceived, 0);
             Interlocked.Exchange(ref _packetLoss, 0);
+            Interlocked.Exchange(ref _windowWaits, 0);
 
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
             _packetSizes.Clear();
@@ -129,17 +132,23 @@ namespace LiteNetLib
             Interlocked.Add(ref _packetLoss, packetLoss);
         }
 
+        public void IncrementWindowWaits()
+        {
+            Interlocked.Increment(ref _windowWaits);
+        }
+
         public override string ToString()
         {
             return
                 string.Format(
-                    "BytesReceived: {0}\nPacketsReceived: {1}\nBytesSent: {2}\nPacketsSent: {3}\nPacketLoss: {4}\nPacketLossPercent: {5}\n",
+                    "BytesReceived: {0}\nPacketsReceived: {1}\nBytesSent: {2}\nPacketsSent: {3}\nPacketLoss: {4}\nPacketLossPercent: {5}\nWindow Wait Count: {6}",
                     BytesReceived,
                     PacketsReceived,
                     BytesSent,
                     PacketsSent,
                     PacketLoss,
-                    PacketLossPercent);
+                    PacketLossPercent,
+                    WindowWaitCount);
         }
     }
 }

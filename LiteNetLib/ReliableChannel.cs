@@ -187,7 +187,12 @@ namespace LiteNetLib
                     {
                         int relate = NetUtils.RelativeSequenceNumber(_localSeqence, _localWindowStart);
                         if (relate >= _windowSize)
+                        {
+                            if (Peer.NetManager.EnableStatistics)
+                                Peer.Statistics.IncrementWindowWaits();
+
                             break;
+                        }
 
                         var netPacket = OutgoingQueue.Dequeue();
                         netPacket.Sequence = (ushort) _localSeqence;
