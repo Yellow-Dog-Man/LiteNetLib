@@ -1,14 +1,21 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace LiteNetLib
 {
     public sealed class NetStatistics
     {
+        public bool TrackAveragePacketSize;
+        public int PacketSizeAverageWindow = 256;
+
         private long _packetsSent;
         private long _packetsReceived;
         private long _bytesSent;
         private long _bytesReceived;
         private long _packetLoss;
+
+        ConcurrentQueue<long> _packetSizes = new ConcurrentQueue<long>();
 
         public long PacketsSent => Interlocked.Read(ref _packetsSent);
         public long PacketsReceived => Interlocked.Read(ref _packetsReceived);
@@ -24,6 +31,26 @@ namespace LiteNetLib
 
                 return sent == 0 ? 0 : loss * 100 / sent;
             }
+        }
+
+        public double ComputeAveragePacketSize()
+        {
+            if (!TrackAveragePacketSize)
+                throw new InvalidOperationException("Tracking average packet size is not enabled");
+
+            int count = 0;
+            long sum = 0;
+
+            foreach(var size in _packetSizes)
+            {
+                count++;
+                sum += size;
+            }
+
+            if (count == 0)
+                return 0;
+
+            return sum / (double)count;
         }
 
         public void Reset()
@@ -48,6 +75,14 @@ namespace LiteNetLib
         public void AddBytesSent(long bytesSent)
         {
             Interlocked.Add(ref _bytesSent, bytesSent);
+
+            if (TrackAveragePacketSize)
+            {
+                _packetSizes.Enqueue(bytesSent);
+
+                while (_packetSizes.Count > 0 && _packetSizes.Count > PacketSizeAverageWindow)
+                    _packetSizes.TryDequeue(out _);
+            }
         }
 
         public void AddBytesReceived(long bytesReceived)
