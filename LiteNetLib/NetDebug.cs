@@ -19,7 +19,7 @@ namespace LiteNetLib
 
     public enum NetLogLevel
     {
-        Warning,
+        Warning = 0,
         Error,
         Trace,
         Info
@@ -41,8 +41,18 @@ namespace LiteNetLib
     {
         public static INetLogger Logger = null;
         private static readonly object DebugLogLock = new object();
+
+#if (DEBUG || DEBUG_MESSAGES)
+        public static NetLogLevel MaximumLoggingLevel = NetLogLevel.Trace;
+#else
+        // Includes Warning as warning is < Error
+        public static NetLogLevel MaximumLoggingLevel = NetLogLevel.Error;
+#endif
         private static void WriteLogic(NetLogLevel logLevel, string str, params object[] args)
         {
+            if (logLevel > MaximumLoggingLevel)
+                return;
+
             lock (DebugLogLock)
             {
                 if (Logger == null)
@@ -60,25 +70,21 @@ namespace LiteNetLib
             }
         }
 
-        [Conditional("DEBUG_MESSAGES")]
         internal static void Write(string str)
         {
             WriteLogic(NetLogLevel.Trace, str);
         }
 
-        [Conditional("DEBUG_MESSAGES")]
         internal static void Write(NetLogLevel level, string str)
         {
             WriteLogic(level, str);
         }
 
-        [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
         internal static void WriteForce(string str)
         {
             WriteLogic(NetLogLevel.Trace, str);
         }
 
-        [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
         internal static void WriteForce(NetLogLevel level, string str)
         {
             WriteLogic(level, str);
