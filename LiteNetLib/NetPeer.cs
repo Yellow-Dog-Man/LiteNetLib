@@ -1342,10 +1342,12 @@ namespace LiteNetLib
                         _connectAttempts++;
                         if (_connectAttempts > NetManager.MaxConnectAttempts)
                         {
+                            NetDebug.Write($"[Update] Connected ID: {_connectTime} failed to respond to a connection request after {_connectAttempts} attempts.");
                             NetManager.DisconnectPeerForce(this, DisconnectReason.ConnectionFailed, 0, null);
                             return;
                         }
 
+                        NetDebug.Write($"[Update] Connected ID: {_connectTime} Sending another connection request, this is attempt {_connectAttempts}.");
                         //else send connect again
                         NetManager.SendRaw(_connectRequestPacket, this);
                     }
