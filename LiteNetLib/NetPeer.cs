@@ -402,7 +402,7 @@ namespace LiteNetLib
             //Send request
             NetManager.SendRaw(_connectRequestPacket, this);
 
-            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}");
+            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}, Endpoint: {remoteEndPoint}");
         }
 
         //"Accept" incoming constructor
@@ -422,7 +422,7 @@ namespace LiteNetLib
             //Send
             NetManager.SendRaw(_connectAcceptPacket, this);
 
-            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}");
+            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, Endpoint: {request.RemoteEndPoint}");
         }
 
         //Reject
@@ -1342,10 +1342,12 @@ namespace LiteNetLib
                         _connectAttempts++;
                         if (_connectAttempts > NetManager.MaxConnectAttempts)
                         {
+                            NetDebug.Write($"[Update] Connected ID: {_connectTime} failed to respond to a connection request after {_connectAttempts} attempts.");
                             NetManager.DisconnectPeerForce(this, DisconnectReason.ConnectionFailed, 0, null);
                             return;
                         }
 
+                        NetDebug.Write($"[Update] Connected ID: {_connectTime} Sending another connection request, this is attempt {_connectAttempts}.");
                         //else send connect again
                         NetManager.SendRaw(_connectRequestPacket, this);
                     }
