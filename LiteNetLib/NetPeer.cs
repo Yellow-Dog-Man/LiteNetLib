@@ -402,7 +402,7 @@ namespace LiteNetLib
             //Send request
             NetManager.SendRaw(_connectRequestPacket, this);
 
-            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}");
+            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}, Endpoint: {remoteEndPoint}");
         }
 
         //"Accept" incoming constructor
@@ -422,7 +422,7 @@ namespace LiteNetLib
             //Send
             NetManager.SendRaw(_connectAcceptPacket, this);
 
-            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}");
+            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, Endpoint: {request.RemoteEndPoint}");
         }
 
         //Reject
