@@ -62,9 +62,14 @@ namespace LiteNetLib
             {
                 NetDebug.WriteError("[AC] Invalid incoming data");
             }
-            if (Result == ConnectionRequestResult.Accept)
-                return _listener.OnConnectionSolved(this, null, 0, 0);
 
+            if (Result == ConnectionRequestResult.Accept)
+            {
+                NetDebug.Write("[AC] Accepting incoming connection.");
+                return _listener.OnConnectionSolved(this, null, 0, 0);
+            }
+
+            NetDebug.Write($"[AC] Invalid key for: {RemoteEndPoint}.");
             Result = ConnectionRequestResult.Reject;
             _listener.OnConnectionSolved(this, null, 0, 0);
             return null;

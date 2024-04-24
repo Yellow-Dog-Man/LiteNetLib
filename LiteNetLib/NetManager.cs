@@ -695,6 +695,7 @@ namespace LiteNetLib
                 if (TryGetPeer(request.RemoteEndPoint, out netPeer))
                 {
                     //already have peer
+                    NetDebug.Write($"[NM] Duplicate peer for {request.RemoteEndPoint}, ignoring.");
                 }
                 else if (request.Result == ConnectionRequestResult.Reject)
                 {

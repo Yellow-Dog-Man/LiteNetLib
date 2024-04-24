@@ -530,7 +530,10 @@ namespace LiteNetLib
             {
                 socket = _udpSocketv6;
                 if (socket == null)
+                {
+                    NetDebug.Write($"[S] No Socket for: {remoteEndPoint}");
                     return 0;
+                }
             }
 
             int result;
@@ -554,7 +557,7 @@ namespace LiteNetLib
                     result = socket.SendTo(message, start, length, SocketFlags.None, remoteEndPoint);
 #endif
                 }
-                //NetDebug.WriteForce("[S]Send packet to {0}, result: {1}", remoteEndPoint, result);
+                NetDebug.Write($"[S]Send packet to {remoteEndPoint}, result: {result}");
             }
             catch (SocketException ex)
             {
@@ -562,6 +565,7 @@ namespace LiteNetLib
                 {
                     case SocketError.NoBufferSpaceAvailable:
                     case SocketError.Interrupted:
+                        NetDebug.Write($"[S] Interrupted {ex}");
                         return 0;
                     case SocketError.MessageSize:
                         NetDebug.Write(NetLogLevel.Trace, $"[SRD] 10040, datalen: {length}");
@@ -569,6 +573,7 @@ namespace LiteNetLib
 
                     case SocketError.HostUnreachable:
                     case SocketError.NetworkUnreachable:
+                        NetDebug.Write($"[S] Network/Host Unreachable {ex}");
                         if (DisconnectOnUnreachable && remoteEndPoint is NetPeer peer)
                         {
                             DisconnectPeerForce(
@@ -584,6 +589,7 @@ namespace LiteNetLib
                         return -1;
 
                     case SocketError.Shutdown:
+                        NetDebug.Write($"[S] Shutdown {ex}");
                         CreateEvent(NetEvent.EType.Error, remoteEndPoint: remoteEndPoint, errorCode: ex.SocketErrorCode);
                         return -1;
 
@@ -603,6 +609,7 @@ namespace LiteNetLib
                     PoolRecycle(expandedPacket);
             }
 
+            // TODO: Why are we hiding failure?
             if (result <= 0)
                 return 0;
 
