@@ -781,8 +781,10 @@ namespace LiteNetLib
 
         private void OnMessageReceived(NetPacket packet, IPEndPoint remoteEndPoint)
         {
+            NetDebug.Write($"[NM] Recieved Packet, from:{remoteEndPoint}, it is: {packet.Size} long. Property: {packet.Property}");
             if (packet.Size == 0)
             {
+                NetDebug.Write($"[NM] Discarding packet with size 0");
                 PoolRecycle(packet);
                 return;
             }
@@ -890,6 +892,7 @@ namespace LiteNetLib
                     CreateEvent(NetEvent.EType.ReceiveUnconnected, remoteEndPoint: remoteEndPoint, readerSource: packet);
                     return;
                 case PacketProperty.NatMessage:
+                    NetDebug.Write($"[NM] Processing NAT Message from {remoteEndPoint}");
                     if (NatPunchEnabled)
                         NatPunchModule.ProcessMessage(remoteEndPoint, packet);
                     return;
