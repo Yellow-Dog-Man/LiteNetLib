@@ -400,9 +400,10 @@ namespace LiteNetLib
             _connectRequestPacket.ConnectionNumber = connectNum;
 
             //Send request
-            NetManager.SendRaw(_connectRequestPacket, this);
+            var success = NetManager.SendRaw(_connectRequestPacket, this);
+            
 
-            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}, Endpoint: {remoteEndPoint}");
+            NetDebug.Write(NetLogLevel.Trace, $"[CC] ConnectId: {_connectTime}, ConnectNum: {connectNum}, Endpoint: {remoteEndPoint}, ConnectRequestSuccess: {success}");
         }
 
         //"Accept" incoming constructor
@@ -1347,9 +1348,9 @@ namespace LiteNetLib
                             return;
                         }
 
-                        NetDebug.Write($"[Update] Connected ID: {_connectTime} Sending another connection request, this is attempt {_connectAttempts}.");
                         //else send connect again
-                        NetManager.SendRaw(_connectRequestPacket, this);
+                        var success = NetManager.SendRaw(_connectRequestPacket, this);
+                        NetDebug.Write($"[Update] Connected ID: {_connectTime} Sending another connection request, this is attempt {_connectAttempts}. Send result: {success}");
                     }
                     return;
 
