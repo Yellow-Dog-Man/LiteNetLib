@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace LiteNetLib
 {
@@ -9,6 +10,8 @@ namespace LiteNetLib
             private NetPacket _packet;
             private long _timeStamp;
             private bool _isSent;
+
+            public bool IsSent => _isSent;
 
             public override string ToString()
             {
@@ -29,16 +32,51 @@ namespace LiteNetLib
 
                 if (_isSent) //check send time
                 {
-                    double resendDelay = peer.ResendDelay * TimeSpan.TicksPerMillisecond;
-                    double packetHoldTime = currentTime - _timeStamp;
-                    if (packetHoldTime < resendDelay)
+                    if (!NeedsResend(currentTime, peer, true))
                         return true;
-                    NetDebug.Write($"[RC]Resend: {packetHoldTime} > {resendDelay}");
                 }
                 _timeStamp = currentTime;
                 _isSent = true;
                 peer.SendUserData(_packet);
                 return true;
+            }
+
+            public bool NeedsSend(long currentTime, NetPeer peer)
+            {
+                if (_packet == null)
+                    return false;
+
+                if (_isSent) //check send time
+                {
+                    if (!NeedsResend(currentTime, peer))
+                        return false;
+                }
+
+                return true;
+            }
+
+            public bool NeedsResend(long currentTime, NetPeer peer, bool logResend = false)
+            {
+                if (!_isSent)
+                    throw new InvalidOperationException("Cannot query packets that were not sent for resend");
+
+                double resendDelay = peer.ResendDelay * TimeSpan.TicksPerMillisecond;
+                double packetHoldTime = currentTime - _timeStamp;
+                if (packetHoldTime < resendDelay)
+                    return false;
+
+                if(logResend)
+                    NetDebug.Write($"[RC]Resend: {packetHoldTime} > {resendDelay}");
+
+                return true;
+            }
+
+            public bool CanMerge(NetPeer peer)
+            {
+                if (_packet == null)
+                    return false;
+
+                return peer.CanMerge(_packet);
             }
 
             public bool Clear(NetPeer peer)
@@ -205,8 +243,10 @@ namespace LiteNetLib
                 //send
                 for (int pendingSeq = _localWindowStart; pendingSeq != _localSeqence; pendingSeq = (pendingSeq + 1) % NetConstants.MaxSequence)
                 {
-                    // Please note: TrySend is invoked on a mutable struct, it's important to not extract it into a variable here
-                    if (_pendingPackets[pendingSeq % _maxWindowSize].TrySend(currentTime, Peer))
+                    // Please note: TrySend is invoked on a mutable struct, it's important that it's kept as ref var
+                    ref var packet = ref _pendingPackets[pendingSeq % _maxWindowSize];
+
+                    if (packet.TrySend(currentTime, Peer))
                         hasPendingPackets = true;
                 }
             }

@@ -1277,10 +1277,19 @@ namespace LiteNetLib
             _mergeCount = 0;
         }
 
-        internal void SendUserData(NetPacket packet)
+        internal int ComputeMergedPacketSize(NetPacket packet) => NetConstants.HeaderSize + packet.Size + 2;
+
+        internal bool CanMerge(NetPacket packet)
+        {
+            int mergedPacketSize = ComputeMergedPacketSize(packet);
+
+            return _mergePos + mergedPacketSize <= _mtu;
+        }
+
+        internal bool SendUserData(NetPacket packet)
         {
             packet.ConnectionNumber = _connectNum;
-            int mergedPacketSize = NetConstants.HeaderSize + packet.Size + 2;
+            int mergedPacketSize = ComputeMergedPacketSize(packet);
             const int sizeTreshold = 20;
             if (mergedPacketSize + sizeTreshold >= _mtu)
             {
@@ -1293,16 +1302,23 @@ namespace LiteNetLib
                     Statistics.AddBytesSent(bytesSent);
                 }
 
-                return;
+                return true;
             }
-            if (_mergePos + mergedPacketSize > _mtu)
+
+            bool packetWasSent = false;
+            if (!CanMerge(packet))
+            {
                 SendMerged();
+                packetWasSent = true;
+            }
 
             FastBitConverter.GetBytes(_mergeData.RawData, _mergePos + NetConstants.HeaderSize, (ushort)packet.Size);
             Buffer.BlockCopy(packet.RawData, 0, _mergeData.RawData, _mergePos + NetConstants.HeaderSize + 2, packet.Size);
             _mergePos += packet.Size + 2;
             _mergeCount++;
             //DebugWriteForce("Merged: " + _mergePos + "/" + (_mtu - 2) + ", count: " + _mergeCount);
+
+            return packetWasSent;
         }
 
         internal void Update(int deltaTime)
