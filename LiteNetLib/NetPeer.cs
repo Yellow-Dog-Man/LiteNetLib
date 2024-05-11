@@ -81,6 +81,8 @@ namespace LiteNetLib
             }
         }
 
+        internal bool HasUnsentData => _mergeCount > 0;
+
         //Channels
         private readonly Queue<NetPacket> _unreliableChannel;
         private readonly ConcurrentQueue<BaseChannel> _channelSendQueue;

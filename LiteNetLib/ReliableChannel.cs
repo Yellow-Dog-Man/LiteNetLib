@@ -25,7 +25,7 @@ namespace LiteNetLib
             }
 
             //Returns true if there is a pending packet inside
-            public bool TrySend(long currentTime, NetPeer peer)
+            public bool TrySend(long currentTime, NetPeer peer, ref int packetsInFlight)
             {
                 if (_packet == null)
                     return false;
@@ -35,6 +35,9 @@ namespace LiteNetLib
                     if (!NeedsResend(currentTime, peer, true))
                         return true;
                 }
+                else
+                    packetsInFlight++; // Only increment this when it's actually been sent
+
                 _timeStamp = currentTime;
                 _isSent = true;
                 peer.SendUserData(_packet);
@@ -109,10 +112,14 @@ namespace LiteNetLib
         private const int BitsInByte = 8;
         private readonly byte _id;
 
+        private int _dynamicWindowSize;
+        private int _packetsInFlight;
+
         public ReliableChannel(NetPeer peer, bool ordered, byte id) : base(peer)
         {
             _id = id;
             _maxWindowSize = NetConstants.MaximumWindowSize;
+            _dynamicWindowSize = NetConstants.StartingDynamicWindowSize;
             _ordered = ordered;
             _pendingPackets = new PendingPacket[_maxWindowSize];
             for (int i = 0; i < _pendingPackets.Length; i++)
@@ -198,7 +205,12 @@ namespace LiteNetLib
 
                     //clear packet
                     if (_pendingPackets[pendingIdx].Clear(Peer))
+                    {
+                        if (--_packetsInFlight < 0)
+                            throw new InvalidOperationException("Packets in flight dropped below 0, this indicates an error in packet counting");
+
                         NetDebug.Write($"[PA]Removing reliableInOrder ack: {pendingSeq} - true");
+                    }
                 }
             }
         }
@@ -246,8 +258,31 @@ namespace LiteNetLib
                     // Please note: TrySend is invoked on a mutable struct, it's important that it's kept as ref var
                     ref var packet = ref _pendingPackets[pendingSeq % _maxWindowSize];
 
-                    if (packet.TrySend(currentTime, Peer))
-                        hasPendingPackets = true;
+                    if(_packetsInFlight < _dynamicWindowSize)
+                    {
+                        // We have the capacity, let's just send it!
+                        if (packet.TrySend(currentTime, Peer, ref _packetsInFlight))
+                            hasPendingPackets = true;
+                    }
+                    else
+                    {
+                        // We're out of the dynamic window capacity, but let's see if there is some unsent merged data
+                        // We might be able to squeeze in some extra packets to pad the packets along with some other data
+                        if (!Peer.HasUnsentData)
+                            break; // out of luck!
+
+                        // Let's check if it actually needs to be sent first
+                        if (!packet.NeedsSend(currentTime, Peer))
+                            continue;
+
+                        // If it doesn't fit in, let's skip it
+                        if (!packet.CanMerge(Peer))
+                            continue;
+
+                        // It fits in! Let's squeeze it in and send it, even though we're over our window capacity
+                        if (packet.TrySend(currentTime, Peer, ref _packetsInFlight))
+                            hasPendingPackets = true;
+                    }
                 }
             }
 
