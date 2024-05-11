@@ -269,15 +269,27 @@ namespace LiteNetLib
                         // We're out of the dynamic window capacity, but let's see if there is some unsent merged data
                         // We might be able to squeeze in some extra packets to pad the packets along with some other data
                         if (!Peer.HasUnsentData)
+                        {
+                            // There's more pending packets
+                            hasPendingPackets = true;
                             break; // out of luck!
+                        }
 
                         // Let's check if it actually needs to be sent first
                         if (!packet.NeedsSend(currentTime, Peer))
+                        {
+                            if (packet.IsSent)
+                                hasPendingPackets = true;
+
                             continue;
+                        }
 
                         // If it doesn't fit in, let's skip it
                         if (!packet.CanMerge(Peer))
+                        {
+                            hasPendingPackets = true;
                             continue;
+                        }
 
                         // It fits in! Let's squeeze it in and send it, even though we're over our window capacity
                         if (packet.TrySend(currentTime, Peer, ref _packetsInFlight))
