@@ -188,33 +188,43 @@ namespace LibSample
         {
             Console.WriteLine("Testing Throughput...");
 
-            int[] latencies = new int[] { 5, 10, 20, 40, 60, 80, 100, /*120, 140, 160, 180, 200, 250, 300*/ };
-            int packetLoss = 1;
+            int[] packetLossValues = new int[] { 0, 1, 2, 5, 10 };
+            int[] latencies = new int[] { 5, 10, 20, 40, 60, 80, 100, 150, 200, 300 };
 
-            var results = new List<TimeSpan>();
+            Dictionary<int, List<TimeSpan>> resultGroups = new Dictionary<int, List<TimeSpan>>();
 
-            foreach(var latency in latencies)
+            foreach (var packetLoss in packetLossValues)
             {
-                var jitter = Math.Max(1, (int)Math.Round(latency / 5f));
+                var results = new List<TimeSpan>();
 
-                var serverThread = new Thread(() => StartServer(latency, jitter, packetLoss, results));
-                serverThread.Start();
+                resultGroups.Add(packetLoss, results);
 
-                var  clientThread = new Thread(() => StartClient(latency, jitter, packetLoss));
-                clientThread.Start();
+                foreach (var latency in latencies)
+                {
+                    var jitter = Math.Max(1, (int)Math.Round(latency / 5f));
 
-                Console.WriteLine($"Processing, latency: {latency} ms, jitter: {jitter}, packet loss: {packetLoss} %...");
+                    var serverThread = new Thread(() => StartServer(latency, jitter, packetLoss, results));
+                    serverThread.Start();
 
-                serverThread.Join();
-                clientThread.Join();
+                    var clientThread = new Thread(() => StartClient(latency, jitter, packetLoss));
+                    clientThread.Start();
+
+                    Console.WriteLine($"Processing, latency: {latency} ms, jitter: {jitter}, packet loss: {packetLoss} %...");
+
+                    serverThread.Join();
+                    clientThread.Join();
+                }
             }
 
-            Console.WriteLine("Test has completed.");
-
-            for (int i = 0; i < latencies.Length; i++)
+            foreach (var resultGroup in resultGroups)
             {
-                var bytesPerSec = TOTAL_BYTES / results[i].TotalSeconds;
-                Console.WriteLine($"{latencies[i]} ms -> {results[i]}\t{bytesPerSec / 1024:F2} kB/s");
+                Console.WriteLine($"Results for packet loss: {resultGroup.Key} %");
+
+                for (int i = 0; i < latencies.Length; i++)
+                {
+                    var bytesPerSec = TOTAL_BYTES / resultGroup.Value[i].TotalSeconds;
+                    Console.WriteLine($"\t{latencies[i]} ms -> {resultGroup.Value[i]}\t{bytesPerSec / 1024:F2} kB/s");
+                }
             }
         }
 
