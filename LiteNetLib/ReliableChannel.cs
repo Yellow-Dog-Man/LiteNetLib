@@ -261,6 +261,17 @@ namespace LiteNetLib
                     // Please note: TrySend is invoked on a mutable struct, it's important that it's kept as ref var
                     ref var packet = ref _pendingPackets[pendingSeq % _maxWindowSize];
 
+                    // If the packet was already sent, always check if it needs to be resent
+                    if(packet.IsSent)
+                    {
+                        hasPendingPackets = true;
+
+                        if (packet.NeedsResend(currentTime, Peer))
+                            packet.TrySend(currentTime, Peer, ref _packetsInFlight);
+
+                        continue;
+                    }
+
                     if(_packetsInFlight < _dynamicWindowSize)
                     {
                         // We have the capacity, let's just send it!
