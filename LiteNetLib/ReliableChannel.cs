@@ -94,6 +94,9 @@ namespace LiteNetLib
             }
         }
 
+        public int CurrentDynamicWindowSize => _dynamicWindowSize;
+        public int CurrentPacketsInFlight => _packetsInFlight;
+
         private readonly NetPacket _outgoingAcks;            //for send acks
         private readonly PendingPacket[] _pendingPackets;    //for unacked packets and duplicates
         private readonly NetPacket[] _receivedPackets;       //for order
