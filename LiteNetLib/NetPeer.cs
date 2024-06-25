@@ -312,6 +312,20 @@ namespace LiteNetLib
                     reliableChannel.CurrentDynamicWindowSize = size;
         }
 
+        public int TotalReliablePacketsInFlight
+        {
+            get
+            {
+                int count = 0;
+
+                foreach (var channel in _channels)
+                    if (channel is ReliableChannel reliableChannel)
+                        count += reliableChannel.CurrentPacketsInFlight;
+
+                return count;
+            }
+        }
+
         /// <summary>
         /// Returns packets count in queue for reliable channel
         /// </summary>
