@@ -94,7 +94,20 @@ namespace LiteNetLib
             }
         }
 
-        public int CurrentDynamicWindowSize => _dynamicWindowSize;
+        public int CurrentDynamicWindowSize
+        {
+            get => _dynamicWindowSize;
+            set
+            {
+                if (value < NetConstants.MinimumWindowSize)
+                    throw new ArgumentOutOfRangeException($"Dynamic window size cannot be set to less than {NetConstants.MinimumWindowSize}");
+
+                if (value > NetConstants.MaximumWindowSize)
+                    throw new ArgumentOutOfRangeException($"Dynamic window size cannot be set above {NetConstants.MaximumWindowSize}");
+
+                _dynamicWindowSize = value;
+            }
+        }
         public int CurrentPacketsInFlight => _packetsInFlight;
 
         private readonly NetPacket _outgoingAcks;            //for send acks

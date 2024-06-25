@@ -38,6 +38,7 @@
     public static class NetConstants
     {
         //can be tuned
+        public const int MinimumWindowSize = 8;
         public const int MaximumWindowSize = 512;
         public const int StartingDynamicWindowSize = 64;
         public const int SocketBufferSize = 1024 * 1024; //1mb
