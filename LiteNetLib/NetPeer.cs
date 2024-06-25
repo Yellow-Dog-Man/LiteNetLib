@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using LiteNetLib.Utils;
@@ -302,6 +303,13 @@ namespace LiteNetLib
         {
             _mtu = mtuValue;
             _finishMtu = true;
+        }
+
+        public void SetDynamicWindowSize(int size)
+        {
+            foreach (var channel in _channels)
+                if (channel is ReliableChannel reliableChannel)
+                    reliableChannel.CurrentDynamicWindowSize = size;
         }
 
         /// <summary>
