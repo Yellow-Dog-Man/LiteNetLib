@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using LiteNetLib.Utils;
@@ -80,6 +81,8 @@ namespace LiteNetLib
                 _pongPacket.ConnectionNumber = value;
             }
         }
+
+        internal bool HasUnsentData => _mergeCount > 0;
 
         //Channels
         private readonly Queue<NetPacket> _unreliableChannel;
@@ -300,6 +303,27 @@ namespace LiteNetLib
         {
             _mtu = mtuValue;
             _finishMtu = true;
+        }
+
+        public void SetDynamicWindowSize(int size)
+        {
+            foreach (var channel in _channels)
+                if (channel is ReliableChannel reliableChannel)
+                    reliableChannel.CurrentDynamicWindowSize = size;
+        }
+
+        public int TotalReliablePacketsInFlight
+        {
+            get
+            {
+                int count = 0;
+
+                foreach (var channel in _channels)
+                    if (channel is ReliableChannel reliableChannel)
+                        count += reliableChannel.CurrentPacketsInFlight;
+
+                return count;
+            }
         }
 
         /// <summary>
@@ -1277,10 +1301,19 @@ namespace LiteNetLib
             _mergeCount = 0;
         }
 
-        internal void SendUserData(NetPacket packet)
+        internal int ComputeMergedPacketSize(NetPacket packet) => NetConstants.HeaderSize + packet.Size + 2;
+
+        internal bool CanMerge(NetPacket packet)
+        {
+            int mergedPacketSize = ComputeMergedPacketSize(packet);
+
+            return _mergePos + mergedPacketSize <= _mtu;
+        }
+
+        internal bool SendUserData(NetPacket packet)
         {
             packet.ConnectionNumber = _connectNum;
-            int mergedPacketSize = NetConstants.HeaderSize + packet.Size + 2;
+            int mergedPacketSize = ComputeMergedPacketSize(packet);
             const int sizeTreshold = 20;
             if (mergedPacketSize + sizeTreshold >= _mtu)
             {
@@ -1293,16 +1326,23 @@ namespace LiteNetLib
                     Statistics.AddBytesSent(bytesSent);
                 }
 
-                return;
+                return true;
             }
-            if (_mergePos + mergedPacketSize > _mtu)
+
+            bool packetWasSent = false;
+            if (!CanMerge(packet))
+            {
                 SendMerged();
+                packetWasSent = true;
+            }
 
             FastBitConverter.GetBytes(_mergeData.RawData, _mergePos + NetConstants.HeaderSize, (ushort)packet.Size);
             Buffer.BlockCopy(packet.RawData, 0, _mergeData.RawData, _mergePos + NetConstants.HeaderSize + 2, packet.Size);
             _mergePos += packet.Size + 2;
             _mergeCount++;
             //DebugWriteForce("Merged: " + _mergePos + "/" + (_mtu - 2) + ", count: " + _mergeCount);
+
+            return packetWasSent;
         }
 
         internal void Update(int deltaTime)

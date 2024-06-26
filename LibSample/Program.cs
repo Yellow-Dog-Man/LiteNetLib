@@ -14,6 +14,7 @@ namespace LibSample
             new PacketProcessorExample(),
             new AesEncryptionTest(),
             new NtpTest(),
+            new ThroughputTest(),
         };
 
         static void Main(string[] args)
