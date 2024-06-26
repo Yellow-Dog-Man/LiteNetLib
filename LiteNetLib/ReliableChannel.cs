@@ -197,17 +197,17 @@ namespace LiteNetLib
                         break;
                     }
 
+                    ref var pendingPacket = ref _pendingPackets[pendingSeq % _maxWindowSize];
+
+                    // This packet isn't sent at all, we ignore it
+                    if (!pendingPacket.IsSent)
+                        continue;
+
                     int pendingIdx = pendingSeq % _maxWindowSize;
                     int currentByte = NetConstants.ChanneledHeaderSize + pendingIdx / BitsInByte;
                     int currentBit = pendingIdx % BitsInByte;
                     if ((acksData[currentByte] & (1 << currentBit)) == 0)
                     {
-                        if (Peer.NetManager.EnableStatistics)
-                        {
-                            Peer.Statistics.IncrementPacketLoss();
-                            Peer.NetManager.Statistics.IncrementPacketLoss();
-                        }
-
                         //Skip false ack
                         NetDebug.Write($"[PA]False ack: {pendingSeq}");
                         continue;
